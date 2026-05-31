@@ -10,6 +10,7 @@ from io import StringIO
 from typing import Tuple, List
 
 import requests
+import tqdm
 from tqdm.autonotebook import tqdm
 
 import tempfile
@@ -122,15 +123,36 @@ def run_mmseqs(
 ) -> Tuple[List[str], List[str]]:
     submission_endpoint = "ticket/pair" if use_pairing else "ticket/msa"
 
+    # Modified from
+    # https://stackoverflow.com/a/23816211/6314221
+    def pretty_print_POST(response):
+        """
+        At this point it is completely built and ready
+        to be fired; it is "prepared".
+    
+        However pay attention at the formatting used in 
+        this function because it is programmed to be pretty 
+        printed and may differ from the actual request.
+        """
+        print('{}\n{}\r\n{}\r\n\r\n{}'.format(
+            '-----------START-----------',
+            response.method + ' ' + response.url,
+            '\r\n'.join('{}: {}'.format(k, v) for k, v in response.headers.items()),
+            response.body,
+        ))
+    
     def submit(seqs, mode, N=101):
         n, query = N, ""
         for seq in seqs:
             query += f">{n}\n{seq}\n"
             n += 1
-
+				
+				# res=response
         res = requests.post(
             f"{host_url}/{submission_endpoint}", data={"q": query, "mode": mode}
         )
+        prepared = res.request
+        pretty_print_POST(prepared)
         try:
             out = res.json()
         except ValueError:
